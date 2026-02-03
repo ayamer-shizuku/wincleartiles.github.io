@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 7.5 模拟器</title>
+    <style>
+        /* --- 基础重置与背景 --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('https://source.unsplash.com/random/1920x1080/?desktop,wood'); /* 替换为你的壁纸URL */
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- 毛玻璃任务栏 (Windows 7 风格) --- */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 45px;
+            background-color: rgba(255, 255, 255, 0.3); /* 半透明 */
+            backdrop-filter: blur(10px); /* 核心：毛玻璃效果 */
+            -webkit-backdrop-filter: blur(10px); /* Safari 兼容 */
+            border-top: 1px solid rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+        }
+
+        /* --- 开始按钮 (经典样式) --- */
+        .start-btn {
+            width: 38px;
+            height: 38px;
+            background-color: #007ACC;
+            border-radius: 5px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* --- 磁贴容器 (Windows 8 风格) --- */
+        .start-menu {
+            display: none; /* 默认隐藏 */
+            position: fixed;
+            bottom: 45px; /* 紧贴任务栏上方 */
+            left: 10px;
+            width: 300px;
+            background-color: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .tiles {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* --- 磁贴通用样式 --- */
+        .tile {
+            padding: 15px;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tile:hover {
+            transform: scale(1.05);
+        }
+
+        /* --- 不同颜色的磁贴 --- */
+        .tile.ie {
+            background-color: #3366CC;
+            grid-column: span 1;
+        }
+        .tile.calc {
+            background-color: #D9534F;
+            grid-column: span 1;
+        }
+        .tile.settings {
+            background-color: #F0AD4E;
+            grid-column: span 2; /* 宽磁贴 */
+        }
+
+        /* --- 计算器模态框 --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .modal h2 {
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        .display {
+            width: 100%;
+            height: 40px;
+            margin-bottom: 10px;
+            text-align: right;
+            font-size: 1.2em;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: inset 0 2px 3px rgba(0,0,0,0.1);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        button.num {
+            background-color: #f0f0f0;
+        }
+
+        button.op {
+            background-color: #e0e0e0;
+        }
+
+        button.equal {
+            background-color: #007ACC;
+            color: white;
+            grid-column: span 2;
+        }
+
+        .close-btn {
+            display: block;
+            margin: 10px auto 0 auto;
+            padding: 5px 15px;
+            background-color: #ccc;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 毛玻璃任务栏 -->
+    <div class="taskbar">
+        <div class="start-btn" id="startBtn">开始</div>
+    </div>
+
+    <!-- 开始菜单 (包含磁贴) -->
+    <div class="start-menu" id="startMenu">
+        <div class="tiles">
+            <div class="tile ie" onclick="window.open('https://www.bing.com', '_blank')">🌐 IE 浏览器</div>
+            <div class="tile calc" onclick="openCalculator()">🧮 计算器</div>
+            <div class="tile settings">⚙️ 设置</div>
+        </div>
+    </div>
+
+    <!-- 计算器模态框 -->
+    <div class="modal" id="calcModal">
+        <h2>简易计算器</h2>
+        <input type="text" class="display" id="display" disabled>
+        <div class="buttons">
+            <button class="num" onclick="appendNumber('7')">7</button>
+            <button class="num" onclick="appendNumber('8')">8</button>
+            <button class="num" onclick="appendNumber('9')">9</button>
+            <button class="op" onclick="setOperation('/')">/</button>
+
+            <button class="num" onclick="appendNumber('4')">4</button>
+            <button class="num" onclick="appendNumber('5')">5</button>
+            <button class="num" onclick="appendNumber('6')">6</button>
+            <button class="op" onclick="setOperation('*')">×</button>
+
+            <button class="num" onclick="appendNumber('1')">1</button>
+            <button class="num" onclick="appendNumber('2')">2</button>
+            <button class="num" onclick="appendNumber('3')">3</button>
+            <button class="op" onclick="setOperation('-')">-</button>
+
+            <button class="num" onclick="appendNumber('0')">0</button>
+            <button class="op" onclick="setOperation('+')">+</button>
+            <button class="equal" onclick="calculate()">=</button>
+        </div>
+        <button class="close-btn" onclick="closeCalculator()">关闭</button>
+    </div>
+
+    <script>
+        // 获取 DOM 元素
+        const startBtn = document.getElementById('startBtn');
+        const startMenu = document.getElementById('startMenu');
+        const calcModal = document.getElementById('calcModal');
+        const display = document.getElementById('display');
+
+        let currentInput = '';
+        let operation = null;
+        let resetScreen = false;
+
+        // 切换开始菜单显示/隐藏
+        startBtn.addEventListener('click', () => {
+            startMenu.style.display = startMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // 打开计算器
+        function openCalculator() {
+            calcModal.style.display = 'block';
+            startMenu.style.display = 'none'; // 打开计算器时关闭菜单
+        }
+
+        // 关闭计算器
+        function closeCalculator() {
+            calcModal.style.display = 'none';
+            currentInput = '';
+            operation = null;
+            display.value = '';
+        }
+
+        // 添加数字
+        function appendNumber(number) {
+            if (display.value === '0' || resetScreen) {
+                display.value = number;
+                resetScreen = false;
+            } else {
+                display.value += number;
+            }
+            currentInput = display.value;
+        }
+
+        // 设置运算符
+        function setOperation(op) {
+            operation = op;
+            display.value += ` ${op} `;
+            resetScreen = true;
+        }
+
+        // 计算结果
+        function calculate() {
+            try {
+                // 这里简单处理，实际可以使用更安全的计算方式
+                const result = eval(display.value);
+                display.value = result;
+                currentInput = result;
+                operation = null;
+            } catch (e) {
+                display.value = '错误';
+            }
+        }
+    </script>
+</body>
+</html>
