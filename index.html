@@ -4,335 +4,476 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Windows ClearTILES</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        /* --- 全局重置 --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: "Segoe UI", sans-serif;
-            height: 100vh;
-            overflow: hidden;
-            background: url('https://images.unsplash.com/photo-1647708381496-755b77f10579?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920') no-repeat center center/cover;
-            position: relative;
+        /* --- 全局基础样式 --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
         }
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.1);
-            backdrop-filter: blur(2px);
-            z-index: -1;
+        body {
+            background-color: #000; /* 黑色背景，避免白色桌面发灰 */
+            overflow: hidden; /* 隐藏滚动条 */
+            user-select: none;
         }
 
-        /* --- 桌面图标样式 (修复融合问题) --- */
+        /* --- 桌面背景与图标 --- */
+        #desktop {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #e0e0e0; /* Win8.1 经典浅灰桌面 */
+            background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden;
+        }
+
+        /* 图标容器 */
         .desktop-icon {
             position: absolute;
+            width: 96px;
+            height: 96px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 8px;
-            /* 增加厚重衬底，让图标从背景中凸显 */
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .desktop-icon i {
-            font-size: 48px;
-            margin-bottom: 5px;
-            display: block;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
-        .desktop-icon span {
-            color: white;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-            font-size: 14px;
+            justify-content: center;
             text-align: center;
-            max-width: 80px;
+            cursor: pointer;
+            /* 拟物化阴影，让图标浮起来 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            /* 白色衬底，解决与背景融合问题 */
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            padding: 8px;
+            transition: transform 0.1s;
         }
         .desktop-icon:hover {
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .icon-img {
+            font-size: 48px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .icon-label {
+            font-size: 12px;
+            color: #222;
+            font-weight: bold;
         }
 
-        /* --- 任务栏与开始菜单 (新增/修复) --- */
-        .taskbar {
-            position: fixed;
-            bottom: 0; left: 0;
-            width: 100%; height: 40px;
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            z-index: 100;
-        }
-        .start-btn {
-            width: 38px; height: 38px;
-            background: #000;
-            border: 1px solid #555;
-            border-radius: 4px;
+        /* --- 开始菜单按钮 (左下角) --- */
+        #start-button {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 48px;
+            height: 48px;
+            background-color: #000;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            margin-right: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 100;
+            transition: background 0.2s;
         }
-        .start-btn:hover { background: #333; }
-        .start-btn i { color: #fff; font-size: 20px; }
+        #start-button:hover {
+            background-color: #333;
+        }
+        #start-button i {
+            font-size: 24px;
+        }
 
-        /* --- 开始菜单面板 (Win8.1 风格) --- */
-        .start-menu {
-            position: fixed;
-            bottom: 40px; left: 0;
+        /* --- 开始菜单面板 (默认隐藏) --- */
+        #start-menu {
+            position: absolute;
+            bottom: 68px; /* 在按钮上方 */
+            left: 10px;
             width: 320px;
-            height: 400px;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0,0,0,0.1);
-            transform: scaleY(0);
-            transform-origin: bottom;
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: none; /* 默认隐藏 */
+            flex-direction: column;
             z-index: 99;
+            backdrop-filter: blur(5px); /* 毛玻璃效果 */
+        }
+        .menu-item {
+            padding: 12px 16px;
             display: flex;
-            flex-direction: column;
-        }
-        .start-menu.active {
-            transform: scaleY(1);
-            opacity: 1;
-        }
-
-        /* --- ClearTILES 磁贴网格 (还原 Win8.1 纯色大块风格) --- */
-        .tiles-container {
-            flex: 1;
-            padding: 10px;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            background: #000;
-        }
-
-        /* Win8.1 核心样式：直角、纯色、无边框 */
-        .tile {
-            /* 移除圆角，还原 Win8.1 直角 */
-            border-radius: 0;
-            color: white;
-            font-weight: bold;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            align-items: center;
             cursor: pointer;
-            /* 增加深度 */
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            transition: transform 0.2s, box-shadow 0.2s;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: #333;
+        }
+        .menu-item:hover {
+            background-color: #f0f0f0;
+        }
+        .menu-item i {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        /* --- 全屏磁贴区域 (点击菜单项后显示) --- */
+        #tiles-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: none; /* 默认隐藏 */
+            flex-wrap: wrap;
+            padding: 20px;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        /* --- Win8.1 核心磁贴样式 --- */
+        /* 关键点：直角、纯色、无边框、大尺寸 */
+        .tile {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            /* Win8.1 标志性的直角 */
+            border-radius: 0;
+            /* Win8.1 标志性的阴影 (悬浮感) */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s ease;
             position: relative;
             overflow: hidden;
         }
-        .tile::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 5px;
-            background: rgba(255,255,255,0.3);
-        }
         .tile:hover {
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1;
         }
 
-        /* Win8.1 配色 */
-        .tile.blue { background: #0078D7; }
-        .tile.green { background: #60A917; }
-        .tile.orange { background: #F09609; }
-        .tile.red { background: #E51400; }
+        /* 大磁贴 (2x2) */
+        .tile-large {
+            width: 310px;
+            height: 310px;
+        }
+        /* 中磁贴 (2x1) */
+        .tile-medium {
+            width: 310px;
+            height: 150px;
+        }
+        /* 小磁贴 (1x1) */
+        .tile-small {
+            width: 150px;
+            height: 150px;
+        }
 
-        /* --- 拟物化视频播放器 (支持上传/拖拽) --- */
-        .video-player {
+        /* Win8.1 经典配色 */
+        .color-blue { background-color: #0094ff; }
+        .color-green { background-color: #60a917; }
+        .color-orange { background-color: #fa6800; }
+        .color-purple { background-color: #ce0058; }
+        .color-red { background-color: #e51400; }
+        .color-teal { background-color: #00aba9; }
+
+        /* --- 拟物化视频播放器窗口 --- */
+        #video-window {
             position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            width: 500px;
-            background: #1a1a1a;
-            border: 3px solid #333;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 720px;
+            height: 480px;
+            background: linear-gradient(180deg, #f0f0f0 0%, #d0d0d0 100%);
+            border: 2px solid #888;
             border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            z-index: 200;
-            display: none;
+            box-shadow: 5px 10px 20px rgba(0,0,0,0.3);
+            display: none; /* 默认隐藏 */
             flex-direction: column;
+            z-index: 2000;
             overflow: hidden;
         }
-        .video-header {
-            background: linear-gradient(to bottom, #333, #111);
-            padding: 10px;
+        .window-header {
+            background: linear-gradient(180deg, #0050ef 0%, #003399 100%);
             color: white;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 1px solid #555;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             cursor: move;
         }
-        .video-body {
-            padding: 20px;
-            text-align: center;
-            background: #000;
+        .window-title {
+            font-size: 14px;
+            font-weight: bold;
         }
-        #video-preview {
-            max-width: 100%;
-            max-height: 300px;
-            background: #000;
-            margin: 0 auto;
-            display: block;
-        }
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            margin: 10px 0;
-            color: #ccc;
-            cursor: pointer;
-        }
-        .upload-area.highlight { border-color: #0078D7; background: rgba(0,120,215,0.1); }
-
-        /* --- 通用窗口控制 --- */
         .window-close {
-            position: absolute;
-            top: 5px; right: 5px;
-            background: #ff5f57;
-            width: 12px; height: 12px;
+            background: #ff5f5f;
+            color: white;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            box-shadow: 0 0 0 1px #333;
+        }
+        .window-content {
+            flex: 1;
+            background-color: #ccc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .drop-area {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .drop-icon {
+            font-size: 64px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+        .drop-text {
+            font-size: 16px;
+            color: #444;
+        }
+        .file-input {
+            display: none;
         }
 
+        /* 播放器底部控制栏 (拟物化) */
+        .player-controls {
+            height: 40px;
+            background: linear-gradient(180deg, #e0e0e0 0%, #c0c0c0 100%);
+            border-top: 1px solid #888;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        .btn-control {
+            background: linear-gradient(180deg, #f5f5f5 0%, #d5d5d5 100%);
+            border: 1px solid #888;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .btn-control:hover {
+            background: linear-gradient(180deg, #e5e5e5 0%, #c5c5c5 100%);
+        }
+        .progress-container {
+            flex: 1;
+            height: 12px;
+            background-color: #eee;
+            border-radius: 6px;
+            margin: 0 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background-color: #0078d7;
+        }
     </style>
 </head>
 <body>
 
-    <!-- --- 桌面图标 --- -->
-    <div class="desktop-icon" style="top: 20px; left: 20px;" onclick="openStartMenu()">
-        <i class="bi bi-windows"></i>
-        <span>开始</span>
-    </div>
-    <div class="desktop-icon" style="top: 100px; left: 20px;" onclick="openApp('video')">
-        <i class="bi bi-play-btn"></i>
-        <span>视频播放器</span>
-    </div>
+    <!-- 桌面区域 -->
+    <div id="desktop">
+        <!-- 开始按钮 -->
+        <div id="start-button">
+            <i class="bi bi-windows"></i>
+        </div>
 
-    <!-- --- 任务栏 --- -->
-    <div class="taskbar">
-        <div class="start-btn" onclick="toggleStartMenu()">
-            <i class="bi bi-grid"></i>
+        <!-- 开始菜单 (半透明面板) -->
+        <div id="start-menu">
+            <div class="menu-item" onclick="showTiles()">
+                <i class="bi bi-grid-3x3-gap-fill"></i> 所有应用
+            </div>
+            <div class="menu-item">
+                <i class="bi bi-folder-fill"></i> 文件资源管理器
+            </div>
+            <div class="menu-item">
+                <i class="bi bi-power"></i> 关机
+            </div>
+        </div>
+
+        <!-- 桌面图标 -->
+        <div class="desktop-icon" style="top: 50px; left: 50px;" onclick="showVideoPlayer()">
+            <div class="icon-img"><i class="bi bi-music-note-beamed"></i></div>
+            <div class="icon-label">音乐</div>
+        </div>
+        <div class="desktop-icon" style="top: 50px; left: 180px;" onclick="alert('功能暂未实现')">
+            <div class="icon-img"><i class="bi bi-folder-fill"></i></div>
+            <div class="icon-label">文档</div>
+        </div>
+        <div class="desktop-icon" style="top: 50px; left: 310px;" onclick="alert('功能暂未实现')">
+            <div class="icon-img"><i class="bi bi-image"></i></div>
+            <div class="icon-label">图片</div>
+        </div>
+        <div class="desktop-icon" style="top: 50px; left: 440px;" onclick="showVideoPlayer()">
+            <div class="icon-img"><i class="bi bi-play-btn-fill"></i></div>
+            <div class="icon-label">视频播放器</div>
         </div>
     </div>
 
-    <!-- --- 开始菜单 (包含 ClearTILES 磁贴) --- -->
-    <div class="start-menu" id="startMenu">
-        <div class="tiles-container">
-            <div class="tile blue" onclick="openApp('browser')">
-                <span>Internet Explorer</span>
-                <i class="bi bi-browser-chrome" style="font-size:32px; align-self:flex-end;"></i>
-            </div>
-            <div class="tile green" onclick="openApp('calc')">
-                <span>计算器</span>
-                <i class="bi bi-calculator" style="font-size:24px; align-self:flex-end;"></i>
-            </div>
-            <div class="tile orange" onclick="openApp('music')">
-                <span>音乐</span>
-                <i class="bi bi-music-note" style="font-size:24px; align-self:flex-end;"></i>
-            </div>
-            <div class="tile red" onclick="openApp('video')">
-                <span>视频播放器</span>
-                <i class="bi bi-play-btn" style="font-size:24px; align-self:flex-end;"></i>
-            </div>
+    <!-- 全屏磁贴视图 -->
+    <div id="tiles-view">
+        <!-- Win8.1 风格磁贴 -->
+        <div class="tile tile-large color-blue" onclick="alert('打开浏览器')">
+            <div style="transform: rotate(45deg); font-size: 60px;">e</div>
+        </div>
+        <div class="tile tile-medium color-green" onclick="alert('打开商店')">
+            <div style="font-size: 40px;">S</div>
+        </div>
+        <div class="tile tile-small color-orange" onclick="alert('打开邮件')">
+            <div style="font-size: 30px;">M</div>
+        </div>
+        <div class="tile tile-small color-purple" onclick="alert('打开日历')">
+            <div style="font-size: 30px;">C</div>
+        </div>
+        <div class="tile tile-medium color-red" onclick="alert('打开相机')">
+            <div style="font-size: 40px;">📷</div>
+        </div>
+        <div class="tile tile-large color-teal" onclick="alert('打开地图')">
+            <div style="font-size: 60px;">🗺️</div>
         </div>
     </div>
 
-    <!-- --- 视频播放器模态框 --- -->
-    <div class="video-player" id="videoPlayer">
-        <div class="window-close" onclick="closeVideo()"></div>
-        <div class="video-header">Windows Media Player - ClearTILES</div>
-        <div class="video-body">
-            <div id="video-preview">您的视频将在这里播放</div>
-            <div class="upload-area" id="uploadArea" onclick="document.getElementById('videoInput').click()">
-                <p>点击选择或拖拽视频文件到这里</p>
-                <input type="file" id="videoInput" accept="video/*" style="display: none;">
+    <!-- 拟物化视频播放器 -->
+    <div id="video-window">
+        <div class="window-header" onmousedown="startDrag(event)">
+            <div class="window-title">Windows Media Player - [ClearTILES]</div>
+            <div class="window-close" onclick="closeVideo()">✕</div>
+        </div>
+        <div class="window-content">
+            <div class="drop-area" onclick="document.getElementById('fileInput').click()" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+                <div class="drop-icon"><i class="bi bi-file-earmark-play"></i></div>
+                <div class="drop-text">拖拽视频文件到这里<br>或点击选择文件</div>
+                <input type="file" id="fileInput" class="file-input" accept="video/*" onchange="handleFileSelect(event)">
+            </div>
+        </div>
+        <div class="player-controls">
+            <div class="btn-control"><i class="bi bi-skip-start-fill"></i></div>
+            <div class="btn-control"><i class="bi bi-play-fill"></i></div>
+            <div class="btn-control"><i class="bi bi-skip-end-fill"></i></div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 开始菜单控制 --- 
-        function toggleStartMenu() {
-            const menu = document.getElementById('startMenu');
-            menu.classList.toggle('active');
-        }
-        function openStartMenu() {
-            document.getElementById('startMenu').classList.add('active');
+        // --- 逻辑控制 ---
+        const startButton = document.getElementById('start-button');
+        const startMenu = document.getElementById('start-menu');
+        const tilesView = document.getElementById('tiles-view');
+        const videoWindow = document.getElementById('video-window');
+
+        // 1. 开始菜单显示/隐藏
+        startButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startMenu.style.display = startMenu.style.display === 'flex' ? 'none' : 'flex';
+        });
+
+        // 点击桌面其他地方关闭菜单
+        document.addEventListener('click', () => {
+            startMenu.style.display = 'none';
+        });
+
+        // 2. 显示磁贴视图
+        function showTiles() {
+            tilesView.style.display = 'flex';
+            startMenu.style.display = 'none';
         }
 
-        // --- 视频播放器逻辑 (支持拖拽与上传) ---
-        const videoPlayer = document.getElementById('videoPlayer');
-        const videoPreview = document.getElementById('videoPreview');
-        const uploadArea = document.getElementById('uploadArea');
-        const videoInput = document.getElementById('videoInput');
+        // 3. 显示视频播放器
+        function showVideoPlayer() {
+            videoWindow.style.display = 'flex';
+        }
 
-        // 打开播放器
-        function openApp(app) {
-            if (app === 'video') {
-                videoPlayer.style.display = 'flex';
-                // 简单的非线性动画
-                setTimeout(() => {
-                    videoPlayer.style.transform = 'translate(-50%, -50%) scale(1)';
-                }, 10);
+        // 4. 关闭视频播放器
+        function closeVideo() {
+            videoWindow.style.display = 'none';
+        }
+
+        // 5. 视频拖拽上传逻辑
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function handleDrop(ev) {
+            ev.preventDefault();
+            const files = ev.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
             }
         }
 
-        // 关闭播放器
-        function closeVideo() {
-            videoPlayer.style.transform = 'translate(-50%, -50%) scale(0.8)';
-            setTimeout(() => {
-                videoPlayer.style.display = 'none';
-            }, 300);
-        }
-
-        // 文件上传逻辑
-        videoInput.addEventListener('change', handleFileSelect, false);
-
-        // 拖拽事件
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('highlight');
-        });
-        uploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('highlight');
-        });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('highlight');
-            const file = e.dataTransfer.files[0];
-            handleFile(file);
-        });
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            handleFile(file);
+        function handleFileSelect(ev) {
+            const file = ev.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
         }
 
         function handleFile(file) {
-            if (file && file.type.startsWith('video/')) {
-                const url = URL.createObjectURL(file);
-                videoPreview.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%; max-height:300px;"></video>`;
+            if (file.type.startsWith('video/')) {
+                // 这里只是模拟，实际浏览器无法直接“播放”文件路径，通常用于上传
+                alert(`已选择视频: ${file.name} (实际开发中可在此处实现上传或本地预览)`);
             } else {
-                videoPreview.innerHTML = '不支持的文件格式，请上传视频文件。';
+                alert('仅支持视频文件');
             }
         }
 
+        // 6. 窗口拖拽功能
+        let isDragging = false;
+        let offsetX, offsetY;
+        let windowX, windowY;
+
+        function startDrag(e) {
+            isDragging = true;
+            const rect = videoWindow.getBoundingClientRect();
+            windowX = rect.left;
+            windowY = rect.top;
+            offsetX = e.clientX;
+            offsetY = e.clientY;
+            videoWindow.style.transition = 'none'; // 拖拽时禁用过渡
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - offsetX;
+                const dy = e.clientY - offsetY;
+                videoWindow.style.left = (windowX + dx) + 'px';
+                videoWindow.style.top = (windowY + dy) + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            videoWindow.style.transition = ''; // 恢复过渡
+        });
     </script>
 </body>
 </html>
-
-
