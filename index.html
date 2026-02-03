@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows 7.5 模拟器</title>
+    <title>Windows 7.8 拟物融合模拟器</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        /* --- 基础重置与背景 --- */
+        /* --- 基础设置 --- */
         * {
             margin: 0;
             padding: 0;
@@ -13,272 +14,492 @@
         }
 
         body {
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background-image: url('https://source.unsplash.com/random/1920x1080/?desktop,wood'); /* 替换为你的壁纸URL */
-            background-size: cover;
-            background-position: center;
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
             height: 100vh;
             overflow: hidden;
+            background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
+            background-image: radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%, transparent 70%);
             position: relative;
         }
 
-        /* --- 毛玻璃任务栏 (Windows 7 风格) --- */
-        .taskbar {
-            position: fixed;
-            bottom: 0;
+        /* --- 场景切换类 --- */
+        .scene {
+            position: absolute;
             width: 100%;
-            height: 45px;
-            background-color: rgba(255, 255, 255, 0.3); /* 半透明 */
-            backdrop-filter: blur(10px); /* 核心：毛玻璃效果 */
-            -webkit-backdrop-filter: blur(10px); /* Safari 兼容 */
-            border-top: 1px solid rgba(255, 255, 255, 0.5);
+            height: 100%;
             display: flex;
-            align-items: center;
-            padding-left: 10px;
-        }
-
-        /* --- 开始按钮 (经典样式) --- */
-        .start-btn {
-            width: 38px;
-            height: 38px;
-            background-color: #007ACC;
-            border-radius: 5px;
-            margin-right: 10px;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            align-items: center;
+            transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.5s ease;
         }
 
-        /* --- 磁贴容器 (Windows 8 风格) --- */
-        .start-menu {
-            display: none; /* 默认隐藏 */
-            position: fixed;
-            bottom: 45px; /* 紧贴任务栏上方 */
-            left: 10px;
-            width: 300px;
-            background-color: rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            backdrop-filter: blur(10px);
+        /* 桌面场景：默认显示 */
+        #desktop-scene {
+            transform: translateX(0);
+            opacity: 1;
+            z-index: 1;
         }
 
-        .tiles {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        /* 桌面场景：离开屏幕 */
+        #desktop-scene.out {
+            transform: translateX(-150vw) rotate(-30deg);
+            opacity: 0;
+            z-index: 0;
         }
 
-        /* --- 磁贴通用样式 --- */
-        .tile {
+        /* 磁贴场景：默认隐藏 */
+        #metro-scene {
+            transform: translateX(100%);
+            opacity: 0;
+            z-index: 0;
+        }
+
+        #metro-scene.active {
+            transform: translateX(0);
+            opacity: 1;
+            z-index: 1;
+        }
+
+        /* --- 桌面图标 --- */
+        .desktop-icon {
+            width: 100px;
             padding: 15px;
+            margin: 20px;
             color: white;
-            border-radius: 5px;
-            font-weight: bold;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        .desktop-icon:hover {
+            transform: scale(1.1) translateY(-5px);
+        }
+
+        .desktop-icon i {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* --- 毛玻璃开始菜单 (磁贴屏) --- */
+        .metro-menu {
+            width: 90%;
+            height: 90%;
+            background-color: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            overflow: auto;
+            position: relative;
+        }
+
+        /* --- 拟物磁贴 --- */
+        .tile {
+            aspect-ratio: 1 / 1;
+            border-radius: 12px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 6px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            position: relative;
+            overflow: hidden;
+            font-weight: bold;
+        }
+
+        .tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .tile:hover {
-            transform: scale(1.05);
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 10px 20px rgba(0,0,0,0.4);
+            z-index: 1;
         }
 
-        /* --- 不同颜色的磁贴 --- */
-        .tile.ie {
-            background-color: #3366CC;
-            grid-column: span 1;
-        }
-        .tile.calc {
-            background-color: #D9534F;
-            grid-column: span 1;
-        }
-        .tile.settings {
-            background-color: #F0AD4E;
-            grid-column: span 2; /* 宽磁贴 */
+        .tile:active {
+            transform: scale(0.95);
         }
 
-        /* --- 计算器模态框 --- */
-        .modal {
+        /* 磁贴颜色 */
+        .tile.browser { background: linear-gradient(135deg, #0078D7 0%, #004c87 100%); }
+        .tile.calc { background: linear-gradient(135deg, #60A917 0%, #336600 100%); }
+        .tile.music { background: linear-gradient(135deg, #D80073 0%, #99004c 100%); }
+        .tile.video { background: linear-gradient(135deg, #A2C139 0%, #6b8724 100%); }
+
+        /* --- 通用应用窗口 --- */
+        .app-window {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 400px;
+            max-width: 90vw;
+            max-height: 90vh;
             background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            z-index: 100;
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            z-index: 1000;
+            overflow: hidden;
+            /* 弹跳动画 */
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
-        .modal h2 {
-            margin-bottom: 15px;
-            color: #333;
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            70% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.9; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* --- 拟物视频播放器 --- */
+        .video-player {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-screen {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(#000 50%, #000 50%), #000;
+            background-size: 100% 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-screen::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.2) 50%, transparent);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .video-controls {
+            padding: 10px;
+            background: #f0f0f0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .video-controls input {
+            flex-grow: 1;
+        }
+
+        /* --- 拟物音乐播放器 --- */
+        .music-player {
+            padding: 20px;
             text-align: center;
         }
 
-        .display {
+        .record-container {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px auto;
+            position: relative;
+        }
+
+        .record {
             width: 100%;
-            height: 40px;
-            margin-bottom: 10px;
-            text-align: right;
-            font-size: 1.2em;
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-shadow: inset 0 2px 3px rgba(0,0,0,0.1);
+            height: 100%;
+            background: conic-gradient(from 0deg, #333 0%, #333 10%, #555 10%, #555 20%);
+            border-radius: 50%;
+            position: relative;
+            animation: spin 3s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .buttons {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
+        .record::before {
+            content: '';
+            position: absolute;
+            width: 20%;
+            height: 20%;
+            background: #000;
+            border-radius: 50%;
         }
 
-        button {
-            padding: 10px;
+        .tonearm {
+            position: absolute;
+            width: 60px;
+            height: 5px;
+            background: #888;
+            top: 10px;
+            left: 45px;
+            border-radius: 5px 5px 0 0;
+            transform-origin: left center;
+            z-index: 2;
+        }
+
+        .tonearm::after {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #666;
+            border-radius: 50%;
+            top: -5px;
+            left: -5px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .music-controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .music-btn {
+            padding: 8px 12px;
             border: none;
-            border-radius: 4px;
+            border-radius: 20px;
+            background: #eee;
             cursor: pointer;
-            font-size: 1em;
+            font-weight: bold;
         }
 
-        button.num {
-            background-color: #f0f0f0;
-        }
-
-        button.op {
-            background-color: #e0e0e0;
-        }
-
-        button.equal {
-            background-color: #007ACC;
-            color: white;
-            grid-column: span 2;
-        }
-
+        /* --- 关闭按钮 --- */
         .close-btn {
-            display: block;
-            margin: 10px auto 0 auto;
-            padding: 5px 15px;
-            background-color: #ccc;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
             border: none;
-            border-radius: 4px;
+            font-size: 20px;
             cursor: pointer;
+            z-index: 1001;
+            color: #999;
         }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
     </style>
 </head>
 <body>
 
-    <!-- 毛玻璃任务栏 -->
-    <div class="taskbar">
-        <div class="start-btn" id="startBtn">开始</div>
-    </div>
-
-    <!-- 开始菜单 (包含磁贴) -->
-    <div class="start-menu" id="startMenu">
-        <div class="tiles">
-            <div class="tile ie" onclick="window.open('https://www.bing.com', '_blank')">🌐 IE 浏览器</div>
-            <div class="tile calc" onclick="openCalculator()">🧮 计算器</div>
-            <div class="tile settings">⚙️ 设置</div>
+    <!-- --- 场景 1: 桌面 --- -->
+    <div class="scene" id="desktop-scene">
+        <div class="desktop-icons">
+            <div class="desktop-icon" data-app="browser">
+                <i class="bi bi-browser-chrome"></i>
+                <span>Internet Explorer</span>
+            </div>
+            <div class="desktop-icon" data-app="calc">
+                <i class="bi bi-calculator"></i>
+                <span>计算器</span>
+            </div>
+            <div class="desktop-icon" data-app="music">
+                <i class="bi bi-music-note-beamed"></i>
+                <span>音乐播放器</span>
+            </div>
+            <div class="desktop-icon" data-app="video">
+                <i class="bi bi-play-btn"></i>
+                <span>视频播放器</span>
+            </div>
         </div>
     </div>
 
-    <!-- 计算器模态框 -->
-    <div class="modal" id="calcModal">
-        <h2>简易计算器</h2>
-        <input type="text" class="display" id="display" disabled>
-        <div class="buttons">
-            <button class="num" onclick="appendNumber('7')">7</button>
-            <button class="num" onclick="appendNumber('8')">8</button>
-            <button class="num" onclick="appendNumber('9')">9</button>
-            <button class="op" onclick="setOperation('/')">/</button>
-
-            <button class="num" onclick="appendNumber('4')">4</button>
-            <button class="num" onclick="appendNumber('5')">5</button>
-            <button class="num" onclick="appendNumber('6')">6</button>
-            <button class="op" onclick="setOperation('*')">×</button>
-
-            <button class="num" onclick="appendNumber('1')">1</button>
-            <button class="num" onclick="appendNumber('2')">2</button>
-            <button class="num" onclick="appendNumber('3')">3</button>
-            <button class="op" onclick="setOperation('-')">-</button>
-
-            <button class="num" onclick="appendNumber('0')">0</button>
-            <button class="op" onclick="setOperation('+')">+</button>
-            <button class="equal" onclick="calculate()">=</button>
+    <!-- --- 场景 2: 磁贴开始屏幕 --- -->
+    <div class="scene" id="metro-scene">
+        <div class="metro-menu">
+            <div class="tile browser" data-app="browser">
+                <span>Internet Explorer</span>
+                <i class="bi bi-browser-chrome"></i>
+            </div>
+            <div class="tile calc" data-app="calc">
+                <span>计算器</span>
+                <i class="bi bi-calculator"></i>
+            </div>
+            <div class="tile music" data-app="music">
+                <span>音乐播放器</span>
+                <i class="bi bi-music-note-beamed"></i>
+            </div>
+            <div class="tile video" data-app="video">
+                <span>视频播放器</span>
+                <i class="bi bi-play-btn"></i>
+            </div>
         </div>
-        <button class="close-btn" onclick="closeCalculator()">关闭</button>
+    </div>
+
+    <!-- --- 应用窗口 --- -->
+
+    <!-- IE 浏览器窗口 -->
+    <div class="app-window" id="browser-window">
+        <button class="close-btn" onclick="closeApp('browser-window')">×</button>
+        <div style="padding: 20px; text-align: center;">
+            <h3>Internet Explorer</h3>
+            <p>正在加载必应...</p>
+            <button onclick="window.open('https://www.bing.com', '_blank')" style="padding:10px 20px; margin-top:10px;">前往必应</button>
+        </div>
+    </div>
+
+    <!-- 计算器窗口 -->
+    <div class="app-window" id="calc-window">
+        <button class="close-btn" onclick="closeApp('calc-window')">×</button>
+        <div style="padding: 20px; text-align: center;">
+            <h3>计算器</h3>
+            <div id="calc-display" style="width:100%; height:40px; background:#eee; margin:10px 0; text-align:right; padding:5px; font-size:1.2em;">0</div>
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px;">
+                <!-- 这里省略了按钮代码，为了节省篇幅，逻辑同上一版 -->
+                <button onclick="calcInput('7')">7</button>
+                <button onclick="calcInput('8')">8</button>
+                <button onclick="calcInput('9')">9</button>
+                <button onclick="calcInput('/')">/</button>
+                <button onclick="calcInput('4')">4</button>
+                <button onclick="calcInput('5')">5</button>
+                <button onclick="calcInput('6')">6</button>
+                <button onclick="calcInput('*')">×</button>
+                <button onclick="calcInput('1')">1</button>
+                <button onclick="calcInput('2')">2</button>
+                <button onclick="calcInput('3')">3</button>
+                <button onclick="calcInput('-')">-</button>
+                <button onclick="calcInput('0')">0</button>
+                <button onclick="calcInput('.')">.</button>
+                <button onclick="calculate()" style="grid-column: span 2;">=</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音乐播放器窗口 -->
+    <div class="app-window" id="music-window">
+        <button class="close-btn" onclick="closeApp('music-window')">×</button>
+        <div class="music-player">
+            <h3>音乐播放器</h3>
+            <div class="record-container">
+                <div class="tonearm"></div>
+                <div class="record"></div>
+            </div>
+            <p>歌曲：拟物风格音乐</p>
+            <div class="music-controls">
+                <button class="music-btn">⏮</button>
+                <button class="music-btn">⏯</button>
+                <button class="music-btn">⏭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 视频播放器窗口 -->
+    <div class="app-window" id="video-window">
+        <button class="close-btn" onclick="closeApp('video-window')">×</button>
+        <div class="video-player">
+            <div class="video-screen">
+                <p>视频画面 (拟物 CRT 风格)</p>
+            </div>
+            <div class="video-controls">
+                <input type="range" min="0" max="100" value="50">
+                <button>播放/暂停</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // 获取 DOM 元素
-        const startBtn = document.getElementById('startBtn');
-        const startMenu = document.getElementById('startMenu');
-        const calcModal = document.getElementById('calcModal');
-        const display = document.getElementById('display');
+        // --- 场景切换逻辑 ---
+        const desktopScene = document.getElementById('desktop-scene');
+        const metroScene = document.getElementById('metro-scene');
 
-        let currentInput = '';
-        let operation = null;
-        let resetScreen = false;
-
-        // 切换开始菜单显示/隐藏
-        startBtn.addEventListener('click', () => {
-            startMenu.style.display = startMenu.style.display === 'block' ? 'none' : 'block';
+        // 点击桌面图标或开始菜单进入磁贴屏
+        document.addEventListener('click', function(e) {
+            const app = e.target.closest('.desktop-icon, .tile');
+            if (app) {
+                const appName = app.dataset.app;
+                // 触发动画：桌面飞走，磁贴屏弹入
+                desktopScene.classList.add('out');
+                setTimeout(() => {
+                    metroScene.classList.add('active');
+                }, 100);
+                // 如果是直接点击图标，延迟打开应用
+                if (app.classList.contains('desktop-icon')) {
+                    setTimeout(() => openApp(appName), 600);
+                }
+            }
         });
 
-        // 打开计算器
-        function openCalculator() {
-            calcModal.style.display = 'block';
-            startMenu.style.display = 'none'; // 打开计算器时关闭菜单
-        }
+        // 点击磁贴打开应用
+        document.querySelectorAll('.tile').forEach(tile => {
+            tile.addEventListener('click', function() {
+                const app = this.dataset.app;
+                openApp(app);
+            });
+        });
 
-        // 关闭计算器
-        function closeCalculator() {
-            calcModal.style.display = 'none';
-            currentInput = '';
-            operation = null;
-            display.value = '';
-        }
-
-        // 添加数字
-        function appendNumber(number) {
-            if (display.value === '0' || resetScreen) {
-                display.value = number;
-                resetScreen = false;
-            } else {
-                display.value += number;
+        // --- 打开应用 ---
+        function openApp(appName) {
+            // 隐藏磁贴屏
+            metroScene.classList.remove('active');
+            desktopScene.classList.remove('out');
+            
+            // 显示对应窗口
+            const window = document.getElementById(`${appName}-window`);
+            if (window) {
+                window.style.display = 'block';
             }
-            currentInput = display.value;
         }
 
-        // 设置运算符
-        function setOperation(op) {
-            operation = op;
-            display.value += ` ${op} `;
-            resetScreen = true;
+        // --- 关闭应用 ---
+        function closeApp(windowId) {
+            document.getElementById(windowId).style.display = 'none';
         }
 
-        // 计算结果
+        // --- 简单的计算器逻辑 ---
+        let calcDisplay = document.getElementById('calc-display');
+        let currentInput = '0';
+        let operation = null;
+
+        function calcInput(value) {
+            if (currentInput === '0' || operation === '=') {
+                currentInput = value;
+                operation = null;
+            } else {
+                currentInput += value;
+            }
+            calcDisplay.innerText = currentInput;
+        }
+
         function calculate() {
             try {
-                // 这里简单处理，实际可以使用更安全的计算方式
-                const result = eval(display.value);
-                display.value = result;
-                currentInput = result;
-                operation = null;
+                // 简单计算
+                currentInput = eval(currentInput).toString();
+                operation = '=';
+                calcDisplay.innerText = currentInput;
             } catch (e) {
-                display.value = '错误';
+                calcDisplay.innerText = '错误';
             }
         }
     </script>
