@@ -1,222 +1,172 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win8.1 x Mac Glass - ClearTILES</title>
+    <title>桌面与直接桌面切换 + 拟物化视频播放器</title>
     <style>
-        /* --- 基础设置 --- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
-        }
-
         body {
-            /* 背景采用 Windows 8.1 标志性的深蓝色渐变 */
-            background: radial-gradient(circle at center, #1a1a1a 0%, #0d0d0d 100%);
-            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            font-family: Arial, sans-serif;
+            margin: 0;
             height: 100vh;
-            overflow: hidden;
-            position: relative;
-            color: #ffffff;
-        }
-
-        /* --- 毛玻璃特效核心 --- */
-        .glass-tile {
-            /* 毛玻璃核心：背景模糊 + 半透明底色 */
-            backdrop-filter: blur(8px) saturate(1.2);
-            background-color: rgba(255, 255, 255, 0.08); /* 极淡的白，让颜色透出来 */
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            /* Windows 8.1 核心特征：直角 */
-            border-radius: 0;
-            /* 阴影：模拟 Mac 的悬浮感 + Win8 的硬朗 */
-            box-shadow: 
-                inset 0 1px 2px rgba(255,255,255,0.1), /* 内亮边 */
-                0 4px 10px rgba(0,0,0,0.4); /* 外投影 */
-            /* 动画：非线性缓动 */
-            transition: transform 0.3s var(--ease-in-out-quint), 
-                        box-shadow 0.3s var(--ease-in-out-quint);
-        }
-
-        /* 鼠标悬停特效：Mac 风格的“按下”感 */
-        .glass-tile:hover {
-            transform: scale(1.02) translateY(-2px);
-            box-shadow: 
-                inset 0 1px 2px rgba(255,255,255,0.15),
-                0 8px 20px rgba(0,0,0,0.3);
-            background-color: rgba(255, 255, 255, 0.12);
-        }
-
-        /* 点击特效：微缩放 */
-        .glass-tile:active {
-            transform: scale(0.98) translateY(0px);
-        }
-
-        /* --- 自定义缓动函数 (非线性动画) --- */
-        :root {
-            --ease-in-out-quint: cubic-bezier(0.86, 0, 0.07, 1);
-        }
-
-        /* --- 磁贴布局容器 --- */
-        .tiles-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 20px;
-            padding: 40px;
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* --- 磁贴内部样式 --- */
-        .tile-content {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 15px;
-        }
-
-        .tile-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
-            /* 让图标颜色跟随背景色变化 */
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-        }
-
-        .tile-title {
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        /* --- 开始按钮 (左下角) --- */
-        #start-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 60px;
-            height: 60px;
-            background-color: rgba(0, 0, 0, 0.7);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            cursor: pointer;
-            z-index: 1000;
-            transition: all 0.3s var(--ease-in-out-quint);
+            background-color: #111;
         }
-
-        #start-btn:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            transform: scale(1.1);
-        }
-
-        #start-btn i {
-            font-size: 24px;
-        }
-
-        /* --- 装饰性元素：类似 P1 的桌面背景 --- */
-        .wallpaper-overlay {
+        /* 毛玻璃效果 */
+        .blurred-background {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            /* 模拟 Mac 桌面的高斯模糊背景 */
-            background-image: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.05) 0%, transparent 70%);
-            pointer-events: none;
+            backdrop-filter: blur(10px);
+            z-index: -1;
         }
+
+        /* 普通桌面 */
+        .desktop, .direct-desktop {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            transition: all 0.5s ease;
+        }
+        .desktop {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            animation: desktopAnimation 2s ease-in-out infinite alternate;
+        }
+        @keyframes desktopAnimation {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(5deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .direct-desktop {
+            background: #009688;
+            color: white;
+            display: none;
+            animation: directDesktopAnimation 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes directDesktopAnimation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* 按钮样式 */
+        .start-btn {
+            padding: 20px 40px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: 0.3s;
+        }
+        .start-btn:hover {
+            background: #45a049;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 拟物化视频播放器 */
+        .video-container {
+            background: #1c1c1c;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            display: inline-block;
+        }
+        video {
+            width: 600px;
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .video-controls {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .play-btn, .pause-btn {
+            padding: 10px 20px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .play-btn:hover, .pause-btn:hover {
+            background: #0056b3;
+        }
+
     </style>
 </head>
 <body>
 
-    <!-- 桌面背景装饰 -->
-    <div class="wallpaper-overlay"></div>
+    <!-- 背景毛玻璃效果 -->
+    <div class="blurred-background"></div>
 
-    <!-- 开始按钮 -->
-    <div id="start-btn" onclick="toggleMenu()">
-        <i class="bi bi-windows"></i>
+    <!-- 普通桌面 -->
+    <div class="desktop" id="desktop">
+        <button class="start-btn" id="start-btn">开始</button>
     </div>
 
-    <!-- 磁贴容器 -->
-    <div class="tiles-container" id="tiles-grid">
-        <!-- 动态生成的磁贴将插入这里 -->
+    <!-- 直接桌面 -->
+    <div class="direct-desktop" id="direct-desktop">
+        <h1>直接桌面</h1>
+        <button class="start-btn" id="back-btn">返回普通桌面</button>
+    </div>
+
+    <!-- 视频播放器 -->
+    <div class="video-container">
+        <video id="video-player" controls>
+            <source src="your-video-file.mp4" type="video/mp4">
+            您的浏览器不支持视频播放。
+        </video>
+        <div class="video-controls">
+            <button class="play-btn" id="play-btn">播放</button>
+            <button class="pause-btn" id="pause-btn">暂停</button>
+        </div>
     </div>
 
     <script>
-        // 磁贴数据
-        const tileData = [
-            { icon: 'bi-app', title: '应用商店', color: '#0078d7' },
-            { icon: 'bi-envelope', title: '邮件', color: '#e43d33' },
-            { icon: 'bi-chat-left-text', title: '信息', color: '#8e7cc3' },
-            { icon: 'bi-image', title: '照片', color: '#a2c8ec' },
-            { icon: 'bi-music-note', title: '音乐', color: '#d11177' },
-            { icon: 'bi-play-btn', title: '视频', color: '#00a3ee' },
-            { icon: 'bi-people', title: '人脉', color: '#76c044' },
-            { icon: 'bi-file-earmark', title: '文档', color: '#999999' },
-            { icon: 'bi-gear', title: '设置', color: '#666666' },
-            { icon: 'bi-search', title: '搜索', color: '#f39c12' }
-        ];
+        const startBtn = document.getElementById('start-btn');
+        const backBtn = document.getElementById('back-btn');
+        const desktop = document.getElementById('desktop');
+        const directDesktop = document.getElementById('direct-desktop');
+        const playBtn = document.getElementById('play-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const videoPlayer = document.getElementById('video-player');
 
-        // 生成磁贴
-        function generateTiles() {
-            const container = document.getElementById('tiles-grid');
-            container.innerHTML = ''; // 清空
+        startBtn.addEventListener('click', () => {
+            desktop.style.display = 'none';
+            directDesktop.style.display = 'flex';
+        });
 
-            tileData.forEach((tile, index) => {
-                const tileEl = document.createElement('div');
-                tileEl.className = 'glass-tile';
-                // 随机高度模拟 Win8.1 大小磁贴
-                const height = index % 3 === 0 ? '200px' : '150px'; 
-                
-                // 应用颜色到毛玻璃背景上
-                tileEl.style.backgroundImage = `linear-gradient(135deg, ${tile.color}20 0%, ${tile.color}50 100%)`;
-                tileEl.style.height = height;
+        backBtn.addEventListener('click', () => {
+            directDesktop.style.display = 'none';
+            desktop.style.display = 'flex';
+        });
 
-                tileEl.innerHTML = `
-                    <div class="tile-content">
-                        <div class="tile-icon ${tile.icon}"></div>
-                        <div class="tile-title">${tile.title}</div>
-                    </div>
-                `;
+        playBtn.addEventListener('click', () => {
+            videoPlayer.play();
+        });
 
-                container.appendChild(tileEl);
-            });
-        }
-
-        // 动画加载
-        function animateTiles() {
-            const tiles = document.querySelectorAll('.glass-tile');
-            tiles.forEach((tile, index) => {
-                tile.style.opacity = '0';
-                tile.style.transform = 'translateY(20px)';
-
-                setTimeout(() => {
-                    tile.style.transition = 'all 0.6s var(--ease-in-out-quint)';
-                    tile.style.opacity = '1';
-                    tile.style.transform = 'translateY(0)';
-                }, index * 100); // 依次延迟出现
-            });
-        }
-
-        // 模拟开始菜单切换
-        function toggleMenu() {
-            // 这里可以添加切换到 Metro 界面或弹出菜单的逻辑
-            alert('开始菜单已打开 (模拟)');
-        }
-
-        // 初始化
-        window.onload = function() {
-            generateTiles();
-            // 延迟一点执行动画，让背景先渲染
-            setTimeout(animateTiles, 500);
-        };
+        pauseBtn.addEventListener('click', () => {
+            videoPlayer.pause();
+        });
     </script>
+    
 </body>
 </html>
+
